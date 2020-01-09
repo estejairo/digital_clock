@@ -34,11 +34,17 @@ module top(
     logic [31:0]bcd;
     logic clk_display;
 
-    clk_divider #(.O_CLK_FREQ(1000)) clk_divider_inst (
+    clk_divider #(.O_CLK_FREQ(1000)) clk_divider_display (
         .clk_in(CLK100MHZ),
         .reset(~CPU_RESETN),
         .clk_out(clk_display)
     );
+
+    // clk_divider #(.O_CLK_FREQ(1)) clk_divider_timer (
+    //     .clk_in(CLK100MHZ),
+    //     .reset(~CPU_RESETN),
+    //     .clk_out(clk_timer)
+    // );
 
     // unsigned_to_bcd u32_to_bcd_inst (
 	// 	.clk(CLK100MHZ),
