@@ -35,9 +35,9 @@ module unsigned_counter #(
         if (~start)
             number_next[BITS-1:0] = number[BITS-1:0];
         else if (forward)
-            number_next[BITS-1:0] = number[7:0] + 'd1;
+            number_next[BITS-1:0] = number[BITS-1:0] + 'd1;
         else
-            number_next[BITS-1:0] = number[7:0] - 'd1;
+            number_next[BITS-1:0] = number[BITS-1:0] - 'd1;
     end    
 
     // sequential block for FSM. When clock ticks, update the state
