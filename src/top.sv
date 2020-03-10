@@ -30,55 +30,49 @@ module top(
         output  logic CA,CB,CC,CD,CE,CF,CG,DP
     );
 
-    
-    
+    logic rst_status;
+    logic rst_press;
+    logic rst_release;
+    PB_Debouncer cpu_reset_debouncer(
+        .clk(CLK100MHZ),
+        .rst(1'b0),
+        .PB(~CPU_RESETN),
+        .PB_pressed_status(rst_status),
+        .PB_pressed_pulse(rst_press),
+        .PB_released_pulse(rst_release)
+    );
+
     logic clk_display;
     clk_divider #(.O_CLK_FREQ(1000)) clk_divider_display (
         .clk_in(CLK100MHZ),
-        .reset(~CPU_RESETN),
+        .reset(rst_press),
         .clk_out(clk_display)
     );
 
     clk_divider #(.O_CLK_FREQ(1)) clk_divider_timer (
         .clk_in(CLK100MHZ),
-        .reset(~CPU_RESETN),
+        .reset(rst_press),
         .clk_out(clk_timer)
     );
 
-    logic [31:0] seconds;
-    unsigned_counter #(.BITS(32)) second (
-        .clk(clk_timer),
-        .rst(~CPU_RESETN),
-        .start(1), //1 to start, 0 to stop
-        .forward(1), //1 to cout forward, 0 to count backwards
-        .number(seconds[31:0])
+    
+    // logic [7:0] seconds;
+    // logic [7:0] minutes;
+    // logic [7:0] hours;
+    logic [23:0] number;
+    timer timer_inst(
+        .clk(CLK100MHZ),
+        .clk_timer(clk_timer),
+        .rst(rst_press),
+        .number(number[23:0])
     );
-
-    // logic start_minutes;
-    // logic start_hours;
-
-    // unsigned_counter #(.BITS(8)) minute (
-    //     .clk(CLK100MHZ),
-    //     .rst(~CPU_RESETN),
-    //     .start(start_minutes), //1 to start, 0 to stop
-    //     .forward(1), //1 to cout forward, 0 to count backwards
-    //     .number(minutes[7:0])
-    // );
-
-    // unsigned_counter #(.BITS(8)) hour (
-    //     .clk(CLK100MHZ),
-    //     .rst(~CPU_RESETN),
-    //     .start(start_hours), //1 to start, 0 to stop
-    //     .forward(1), //1 to cout forward, 0 to count backwards
-    //     .number(hours[7:0])
-    // );
 
     logic idle;
     logic [31:0] bcd;
     unsigned_to_bcd u32_to_bcd_inst (
 		.clk(CLK100MHZ),
 		.trigger(1'b1),
-		.in(seconds[31:0]),
+		.in({8'd0,number[23:0]}),
 		.idle(idle),
 		.bcd(bcd[31:0])
 	);
@@ -86,7 +80,7 @@ module top(
     display_mux display_inst (
         .clk(clk_display),
         .clk_enable(1'b1),
-        .bcd(bcd[31:0]),
+        .bcd({8'hFF,bcd[23:0]}),
         .dots(8'd0),
         .is_negative(1'b0),
         .turn_off(1'b0),

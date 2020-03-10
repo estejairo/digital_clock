@@ -62,13 +62,13 @@ module PB_Debouncer#(
                             end
                          
              PB_PRESSED:    begin
-                                PB_pressed_status = 1'b1;
+                                PB_pressed_pulse = 1'b1;
                                 if (PB_sync)
                                     state_next = PB_STABLE;
                             end
              
              PB_STABLE:     begin
-                                PB_pressed_pulse=1'b1;
+                                PB_pressed_status=1'b1;
                                 state_next = PB_STABLE;
                          
                                 if (~PB_sync)
