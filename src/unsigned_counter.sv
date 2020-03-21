@@ -22,7 +22,7 @@ module unsigned_counter #(
         input   logic clk,
         input   logic rst,
         input 	logic start, //1 to start, 0 to stop
-        input   logic forward, //1 to cout forward, 0 to count backwards
+        input   logic forward, //1 to count forward, 0 to count backwards
         output  logic [BITS-1:0] number
     );
 

@@ -17,6 +17,120 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
+module timer#(
+    parameter T_HOLD           = 10_000_000,      //Clock cycles number to wait
+    parameter T_HOLD_WIDTH     = $clog2(T_HOLD),   //T_HOLD bits size
+    )(
+    input   logic clk,
+    input   logic rst,
+    output  logic [23:0] number
+    
+    );
+
+    
+    logic [7:0] seconds;
+    logic start_seconds = 1'b0;
+    logic rst_seconds = 1'b0;
+    logic seconds_main_rst = (rst||rst_seconds);
+    unsigned_counter #(.BITS(8)) second (
+        .clk(clk),
+        .rst(seconds_main_rst),
+        .start(start_seconds), //1 to start, 0 to stop
+        .forward(1'b1), //1 to cout forward, 0 to count backwards
+        .number(seconds[7:0])
+    );
+
+
+    logic [7:0] minutes;
+    logic start_minutes = 1'b0;
+    logic rst_minutes = 1'b0;
+    logic minutes_main_rst = (rst||rst_minutes);
+    unsigned_counter #(.BITS(8)) second (
+        .clk(clk),
+        .rst(minutes_main_rst),
+        .start(start_minutes), //1 to start, 0 to stop
+        .forward(1'b1), //1 to cout forward, 0 to count backwards
+        .number(minutes[7:0])
+    );
+
+
+    logic [7:0] hours;
+    logic start_hours = 1'b0;
+    logic rst_hours = 1'b0;
+    logic hours_main_rst = (rst||rst_hours);
+    unsigned_counter #(.BITS(8)) second (
+        .clk(clk),
+        .rst(hours_main_rst),
+        .start(start_hours), //1 to start, 0 to stop
+        .forward(1'b1), //1 to cout forward, 0 to count backwards
+        .number(hours[7:0])
+    );
+    
+    enum logic[2:0] {COUNT, TOGGLE} state, state_next;
+
+    logic [T_HOLD_WIDTH-1:0]    hold_duration; 
+    logic                       hold_duration_reset;
+
+    always_comb begin
+        
+        start_seconds = 1'b0;
+        start_minutes = 1'b0;
+        start_hours   = 1'b0;
+
+        rst_seconds = 0;
+        rst_minutes = 0;
+        rst_hours   = 0;
+
+        state_next = COUNT;
+        hold_duration_reset = 0;
+
+        case(state)
+            COUNT:  begin
+                        if (hold_duration >= T_HOLD-1)
+                            state_next = TOGGLE;
+
+            TOGGLE: begin
+                        hold_duration_reset = 1'b1;
+                        start_seconds       = 1'b1;
+                        if (seconds[7:0]>=8'd59) begin
+                            start_seconds   = 1'b0;
+                            rst_seconds     = 1'b1;
+                            start_minutes   = 1'b1;
+                            if (minutes[7:0]>=8'd59) begin
+                                start_minutes   = 1'b0;
+                                rst_minutes     = 1'b1;
+                                start_hours     = 1'b1;
+                                if (minutes[7:0]>=8'd23) begin
+                                    start_hours = 1'b0;
+                                    rst_hours   = 1'b1;
+                                end
+                            end
+                        end
+                    end
+        endcase
+    end
+    
+    always_ff @(posedge clk) begin
+       if (rst || hold_duration_reset) 
+           hold_duration <= 8'd0;
+       else
+           hold_duration <= hold_duration + 8'd1;       
+    end
+
+    always_ff @(posedge clk) begin
+        if (rst)
+            state <= COUNT;
+        else
+            state <= state_next;
+    end
+
+    
+
+
+endmodule
+
+
+/*
 module timer (
     input   logic clk,
     input   logic clk_timer,
@@ -139,3 +253,4 @@ module timer (
     assign number[23:0] = {8'd0,hours[7:0]}* 'd10000 + {8'd0,minutes[7:0]} * 'd100  + {8'd0,seconds[7:0]};
 
 endmodule
+*/
