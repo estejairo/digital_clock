@@ -49,12 +49,6 @@ module top(
         .clk_out(clk_display)
     );
 
-    clk_divider #(.O_CLK_FREQ(1)) clk_divider_timer (
-        .clk_in(CLK100MHZ),
-        .reset(rst_press),
-        .clk_out(clk_timer)
-    );
-
     
     // logic [7:0] seconds;
     // logic [7:0] minutes;
@@ -62,7 +56,6 @@ module top(
     logic [23:0] number;
     timer timer_inst(
         .clk(CLK100MHZ),
-        .clk_timer(clk_timer),
         .rst(rst_press),
         .number(number[23:0])
     );

@@ -3,12 +3,13 @@
 // Company: UTFSM
 // Engineer: Jairo Gonzalez
 // 
-// Create Date: 07.01.2020 14:17:43
-// Design Name: unsigned counter
-// Module Name: unsigned_counter
+// Create Date: 07.02.2020 14:17:43
+// Design Name: timer
+// Module Name: timer
 // Project Name: digital_clock
 // Target Devices: Nexys4 DDR
-// Description: unsigned counter N bits. start, stop, forward and backwards modes
+// Description: Enable a timer with adjustable period. Seconds, minutes and hours
+//              availables.
 // 
 // 
 // Revision:
@@ -18,23 +19,24 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module timer#(
-    parameter T_HOLD           = 10_000_000,      //Clock cycles number to wait
-    parameter T_HOLD_WIDTH     = $clog2(T_HOLD),   //T_HOLD bits size
+    parameter T_HOLD           = 100_000_000,     //Clock cycles number to wait
+    parameter T_HOLD_WIDTH     = $clog2(T_HOLD)   //T_HOLD bits size
     )(
     input   logic clk,
     input   logic rst,
+    // output  logic [7:0] seconds,
+    // output  logic [7:0] minutes,
+    // output  logic [7:0] hours
     output  logic [23:0] number
     
     );
-
     
     logic [7:0] seconds;
     logic start_seconds = 1'b0;
     logic rst_seconds = 1'b0;
-    logic seconds_main_rst = (rst||rst_seconds);
     unsigned_counter #(.BITS(8)) second (
         .clk(clk),
-        .rst(seconds_main_rst),
+        .rst(rst||rst_seconds),
         .start(start_seconds), //1 to start, 0 to stop
         .forward(1'b1), //1 to cout forward, 0 to count backwards
         .number(seconds[7:0])
@@ -44,10 +46,9 @@ module timer#(
     logic [7:0] minutes;
     logic start_minutes = 1'b0;
     logic rst_minutes = 1'b0;
-    logic minutes_main_rst = (rst||rst_minutes);
-    unsigned_counter #(.BITS(8)) second (
+    unsigned_counter #(.BITS(8)) minute (
         .clk(clk),
-        .rst(minutes_main_rst),
+        .rst(rst||rst_minutes),
         .start(start_minutes), //1 to start, 0 to stop
         .forward(1'b1), //1 to cout forward, 0 to count backwards
         .number(minutes[7:0])
@@ -57,10 +58,9 @@ module timer#(
     logic [7:0] hours;
     logic start_hours = 1'b0;
     logic rst_hours = 1'b0;
-    logic hours_main_rst = (rst||rst_hours);
-    unsigned_counter #(.BITS(8)) second (
+    unsigned_counter #(.BITS(8)) hour (
         .clk(clk),
-        .rst(hours_main_rst),
+        .rst(rst||rst_hours),
         .start(start_hours), //1 to start, 0 to stop
         .forward(1'b1), //1 to cout forward, 0 to count backwards
         .number(hours[7:0])
@@ -68,8 +68,8 @@ module timer#(
     
     enum logic[2:0] {COUNT, TOGGLE} state, state_next;
 
-    logic [T_HOLD_WIDTH-1:0]    hold_duration; 
-    logic                       hold_duration_reset;
+    logic [T_HOLD_WIDTH-1:0]    hold_duration = 'b0;; 
+    logic                       hold_duration_reset = 1'b0;
 
     always_comb begin
         
@@ -88,10 +88,12 @@ module timer#(
             COUNT:  begin
                         if (hold_duration >= T_HOLD-1)
                             state_next = TOGGLE;
+                    end
 
             TOGGLE: begin
                         hold_duration_reset = 1'b1;
                         start_seconds       = 1'b1;
+                        state_next = COUNT;
                         if (seconds[7:0]>=8'd59) begin
                             start_seconds   = 1'b0;
                             rst_seconds     = 1'b1;
@@ -100,7 +102,7 @@ module timer#(
                                 start_minutes   = 1'b0;
                                 rst_minutes     = 1'b1;
                                 start_hours     = 1'b1;
-                                if (minutes[7:0]>=8'd23) begin
+                                if (hours[7:0]>=8'd23) begin
                                     start_hours = 1'b0;
                                     rst_hours   = 1'b1;
                                 end
@@ -124,7 +126,7 @@ module timer#(
             state <= state_next;
     end
 
-    
+    assign number[23:0] = {8'd0,hours[7:0]}* 'd10000 + {8'd0,minutes[7:0]} * 'd100  + {8'd0,seconds[7:0]};
 
 
 endmodule
