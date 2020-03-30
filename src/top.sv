@@ -26,16 +26,20 @@
 module top(
         input 	logic CLK100MHZ,
         input   logic CPU_RESETN,
+        input   logic BTNR,
+        input   logic BTNL,
         input   logic [1:0] SW,
-        output  logic  [1:0] LED,
+        output  logic [1:0] LED,
         output 	logic [7:0]AN,
         output  logic CA,CB,CC,CD,CE,CF,CG,DP
     );
 
+    //Buttons
+    //Reset
     logic rst_status;
     logic rst_press;
     logic rst_release;
-    PB_Debouncer cpu_reset_debouncer(
+    PB_Debouncer #(.DELAY(30)) cpu_reset_debouncer(
         .clk(CLK100MHZ),
         .rst(1'b0),
         .PB(~CPU_RESETN),
@@ -44,14 +48,61 @@ module top(
         .PB_released_pulse(rst_release)
     );
 
+    //Adjust minutes
+    logic BTNR_status;
+    logic BTNR_press;
+    logic BTNR_release;
+    PB_Debouncer #(.DELAY(30)) BTNR_debouncer(
+        .clk(CLK100MHZ),
+        .rst(1'b0),
+        .PB(BTNR),
+        .PB_pressed_status(BTNR_status),
+        .PB_pressed_pulse(BTNR_press),
+        .PB_released_pulse(BTNR_release)
+    );
+
+    logic adj_minutes;
+    button_controller BTNR_controller(
+        .PB_pressed_status(BTNR_status),
+        .PB_pressed_pulse(BTNR_press),
+        .PB_released_pulse(BTNR_release),
+        .clk(CLK100MHZ),
+        .rst(rst_press),
+        .button_signal(adj_minutes)
+    );
+
+    //Adjust hours
+    logic BTNL_status;
+    logic BTNL_press;
+    logic BTNL_release;
+    PB_Debouncer #(.DELAY(30)) BTNL_debouncer(
+        .clk(CLK100MHZ),
+        .rst(1'b0),
+        .PB(BTNL),
+        .PB_pressed_status(BTNL_status),
+        .PB_pressed_pulse(BTNL_press),
+        .PB_released_pulse(BTNL_release)
+    );
+
+    logic adj_hours;
+    button_controller BTNL_controller(
+        .PB_pressed_status(BTNL_status),
+        .PB_pressed_pulse(BTNL_press),
+        .PB_released_pulse(BTNL_release),
+        .clk(CLK100MHZ),
+        .rst(rst_press),
+        .button_signal(adj_hours)
+    );
     
 
     //Timer
     logic [23:0] number_timer;
-    timer #(.T_HOLD(1_000_000)) timer_inst (
+    timer timer_inst (
         .clk(CLK100MHZ),
         .rst(rst_press),
-        .start_timer(SW[1]),
+        .start_timer(1'b1),
+        .adjust_minutes(adj_minutes),
+        .adjust_hours(adj_hours),
         .number(number_timer[23:0])
     );
 
@@ -60,9 +111,12 @@ module top(
 
     // //Alarm
     // logic [23:0] number_alarm;
-    // timer timer_inst(
+    // timer alarm_inst(
     //     .clk(CLK100MHZ),
     //     .rst(rst_press),
+    //     .start_timer(1'b0),
+    //     .adjust_minutes(adj_minutes),
+    //     .adjust_hours(adj_hours),
     //     .number(number_alarm[23:0])
     // );
 

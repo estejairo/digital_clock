@@ -19,7 +19,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module button_controller#(
- parameter T_HOLD           = 10_000_000,      //Clock cycles number to wait
+ parameter T_HOLD           = 100_000_000,      //Clock cycles number to wait
  parameter T_HOLD_WIDTH     = $clog2(T_HOLD),   //T_HOLD bits size
  parameter T_TOGGLE          = 5_000_000,       //Clock cycles number between pulses
  parameter T_TOGGLE_WIDTH    = $clog2(T_TOGGLE)   //T_TOGGLE bits size
