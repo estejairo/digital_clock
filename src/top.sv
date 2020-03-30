@@ -26,6 +26,8 @@
 module top(
         input 	logic CLK100MHZ,
         input   logic CPU_RESETN,
+        input   logic [1:0] SW,
+        output  logic  [1:0] LED,
         output 	logic [7:0]AN,
         output  logic CA,CB,CC,CD,CE,CF,CG,DP
     );
@@ -42,33 +44,62 @@ module top(
         .PB_released_pulse(rst_release)
     );
 
+    
+
+    //Timer
+    logic [23:0] number_timer;
+    timer #(.T_HOLD(1_000_000)) timer_inst (
+        .clk(CLK100MHZ),
+        .rst(rst_press),
+        .start_timer(SW[1]),
+        .number(number_timer[23:0])
+    );
+
+    logic [23:0] number;
+    assign number[23:0] = number_timer[23:0];
+
+    // //Alarm
+    // logic [23:0] number_alarm;
+    // timer timer_inst(
+    //     .clk(CLK100MHZ),
+    //     .rst(rst_press),
+    //     .number(number_alarm[23:0])
+    // );
+
+    // logic [31:0] bcd_alarm;
+    // unsigned_to_bcd u32_to_bcd_inst (
+	// 	.clk(CLK100MHZ),
+	// 	.trigger(1'b1),
+	// 	.in({8'd0,number_alarm[23:0]}),
+	// 	.idle(idle),
+	// 	.bcd(bcd_alarm[31:0])
+	// );
+
+    // assign LED[1] = SW[1];
+
+    //Time format
+    logic [23:0] number_bcd;
+    assign number_bcd[23:0] = (SW[0]&&(number[23:0]>='d130000))?number[23:0]-'d120000:(SW[0]&&(number[23:0]<'d10000))?number[23:0]+'d120000:number[23:0];
+    assign LED[0] = SW[0];
+
+    //Display
+    logic idle;
+    logic [31:0] bcd;
+    unsigned_to_bcd u32_to_bcd_inst (
+		.clk(CLK100MHZ),
+		.trigger(1'b1),
+		.in({8'd0,number_bcd[23:0]}),
+		.idle(idle),
+		.bcd(bcd[31:0])
+	);
+
+
     logic clk_display;
     clk_divider #(.O_CLK_FREQ(1000)) clk_divider_display (
         .clk_in(CLK100MHZ),
         .reset(rst_press),
         .clk_out(clk_display)
     );
-
-    
-    // logic [7:0] seconds;
-    // logic [7:0] minutes;
-    // logic [7:0] hours;
-    logic [23:0] number;
-    timer timer_inst(
-        .clk(CLK100MHZ),
-        .rst(rst_press),
-        .number(number[23:0])
-    );
-
-    logic idle;
-    logic [31:0] bcd;
-    unsigned_to_bcd u32_to_bcd_inst (
-		.clk(CLK100MHZ),
-		.trigger(1'b1),
-		.in({8'd0,number[23:0]}),
-		.idle(idle),
-		.bcd(bcd[31:0])
-	);
 
     display_mux display_inst (
         .clk(clk_display),

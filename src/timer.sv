@@ -24,9 +24,9 @@ module timer#(
     )(
     input   logic clk,
     input   logic rst,
-    // output  logic [7:0] seconds,
-    // output  logic [7:0] minutes,
-    // output  logic [7:0] hours
+    input   logic start_timer,
+    // input   logic adjust_minutes,
+    // input   logic adjust_hours,
     output  logic [23:0] number
     
     );
@@ -37,7 +37,7 @@ module timer#(
     unsigned_counter #(.BITS(8)) second (
         .clk(clk),
         .rst(rst||rst_seconds),
-        .start(start_seconds), //1 to start, 0 to stop
+        .start(start_seconds&&start_timer), //1 to start, 0 to stop
         .forward(1'b1), //1 to cout forward, 0 to count backwards
         .number(seconds[7:0])
     );
@@ -49,7 +49,7 @@ module timer#(
     unsigned_counter #(.BITS(8)) minute (
         .clk(clk),
         .rst(rst||rst_minutes),
-        .start(start_minutes), //1 to start, 0 to stop
+        .start(start_minutes&&start_timer), //1 to start, 0 to stop
         .forward(1'b1), //1 to cout forward, 0 to count backwards
         .number(minutes[7:0])
     );
@@ -61,7 +61,7 @@ module timer#(
     unsigned_counter #(.BITS(8)) hour (
         .clk(clk),
         .rst(rst||rst_hours),
-        .start(start_hours), //1 to start, 0 to stop
+        .start(start_hours&&start_timer), //1 to start, 0 to stop
         .forward(1'b1), //1 to cout forward, 0 to count backwards
         .number(hours[7:0])
     );
