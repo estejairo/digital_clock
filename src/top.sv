@@ -29,8 +29,8 @@ module top(
         input   logic BTNR,
         input   logic BTNL,
         input   logic [1:0] SW,
-        output  logic [1:0] LED,
-        output 	logic [7:0]AN,
+        output  logic [15:0] LED,
+        output 	logic [7:0] AN,
         output  logic CA,CB,CC,CD,CE,CF,CG,DP
     );
 
@@ -39,7 +39,7 @@ module top(
     logic rst_status;
     logic rst_press;
     logic rst_release;
-    PB_Debouncer #(.DELAY(30)) cpu_reset_debouncer(
+    PB_Debouncer #(.DELAY(60)) cpu_reset_debouncer(
         .clk(CLK100MHZ),
         .rst(1'b0),
         .PB(~CPU_RESETN),
@@ -52,7 +52,7 @@ module top(
     logic BTNR_status;
     logic BTNR_press;
     logic BTNR_release;
-    PB_Debouncer #(.DELAY(30)) BTNR_debouncer(
+    PB_Debouncer #(.DELAY(60)) BTNR_debouncer(
         .clk(CLK100MHZ),
         .rst(1'b0),
         .PB(BTNR),
@@ -75,7 +75,7 @@ module top(
     logic BTNL_status;
     logic BTNL_press;
     logic BTNL_release;
-    PB_Debouncer #(.DELAY(30)) BTNL_debouncer(
+    PB_Debouncer #(.DELAY(60)) BTNL_debouncer(
         .clk(CLK100MHZ),
         .rst(1'b0),
         .PB(BTNL),
@@ -101,35 +101,43 @@ module top(
         .clk(CLK100MHZ),
         .rst(rst_press),
         .start_timer(1'b1),
-        .adjust_minutes(adj_minutes),
-        .adjust_hours(adj_hours),
+        .adjust_minutes((~SW[1])&&adj_minutes),
+        .adjust_hours((~SW[1])&&adj_hours),
         .number(number_timer[23:0])
     );
 
+    //Alarm
+    logic [23:0] number_alarm;
+    timer alarm_inst(
+        .clk(CLK100MHZ),
+        .rst(rst_press),
+        .start_timer(1'b0),
+        .adjust_minutes(SW[1]&&adj_minutes),
+        .adjust_hours(SW[1]&&adj_hours),
+        .number(number_alarm[23:0])
+    );
+
+    logic   play_led_alarm;
+    always_comb begin
+        if (number_alarm[23:0]==number_timer[23:0])
+            play_led_alarm = 1'b1;
+        else
+            play_led_alarm = 1'b0;
+    end
+    
+    //logic [13:0] leds;
+    led_alarm led_inst(
+        .clk(CLK100MHZ),
+        .rst(rst_press),
+        .start(play_led_alarm),
+        .LED(LED[15:2])
+    );
+    //assign LED[15:2] = leds[13:0];
+
+
     logic [23:0] number;
-    assign number[23:0] = number_timer[23:0];
-
-    // //Alarm
-    // logic [23:0] number_alarm;
-    // timer alarm_inst(
-    //     .clk(CLK100MHZ),
-    //     .rst(rst_press),
-    //     .start_timer(1'b0),
-    //     .adjust_minutes(adj_minutes),
-    //     .adjust_hours(adj_hours),
-    //     .number(number_alarm[23:0])
-    // );
-
-    // logic [31:0] bcd_alarm;
-    // unsigned_to_bcd u32_to_bcd_inst (
-	// 	.clk(CLK100MHZ),
-	// 	.trigger(1'b1),
-	// 	.in({8'd0,number_alarm[23:0]}),
-	// 	.idle(idle),
-	// 	.bcd(bcd_alarm[31:0])
-	// );
-
-    // assign LED[1] = SW[1];
+    assign number[23:0] = (SW[1])?number_alarm[23:0]:number_timer[23:0];
+    assign LED[1] = SW[1];
 
     //Time format
     logic [23:0] number_bcd;

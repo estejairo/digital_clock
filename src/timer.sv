@@ -68,7 +68,7 @@ module timer#(
     
     enum logic[2:0] {WAIT, ADD_SECOND, ADD_MINUTE, ADD_HOUR} state, state_next;
 
-    logic [T_HOLD_WIDTH-1:0]    hold_duration = 'b0;; 
+    logic [T_HOLD_WIDTH-1:0]    hold_duration = 'b0; 
     logic                       hold_duration_reset = 1'b0;
 
     always_comb begin
@@ -77,12 +77,12 @@ module timer#(
         start_minutes = 1'b0;
         start_hours   = 1'b0;
 
-        rst_seconds = 0;
-        rst_minutes = 0;
-        rst_hours   = 0;
+        rst_seconds = 1'b0;
+        rst_minutes = 1'b0;
+        rst_hours   = 1'b0;
 
         state_next = WAIT;
-        hold_duration_reset = 0;
+        hold_duration_reset = 1'b0;
 
         case(state)
             WAIT:       begin
@@ -157,9 +157,9 @@ module timer#(
     
     always_ff @(posedge clk) begin
        if (rst || hold_duration_reset) 
-           hold_duration <= 8'd0;
+           hold_duration <= 'd0;
        else
-           hold_duration <= hold_duration + 8'd1;       
+           hold_duration <= hold_duration + 'd1;       
     end
 
     always_ff @(posedge clk) begin
