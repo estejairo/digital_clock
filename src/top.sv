@@ -39,7 +39,7 @@ module top(
     logic rst_status;
     logic rst_press;
     logic rst_release;
-    PB_Debouncer #(.DELAY(60)) cpu_reset_debouncer(
+    PB_Debouncer #(.DELAY(5_000_000)) cpu_reset_debouncer(
         .clk(CLK100MHZ),
         .rst(1'b0),
         .PB(~CPU_RESETN),
@@ -52,7 +52,7 @@ module top(
     logic BTNR_status;
     logic BTNR_press;
     logic BTNR_release;
-    PB_Debouncer #(.DELAY(60)) BTNR_debouncer(
+    PB_Debouncer #(.DELAY(5_000_000)) BTNR_debouncer(
         .clk(CLK100MHZ),
         .rst(1'b0),
         .PB(BTNR),
@@ -75,7 +75,7 @@ module top(
     logic BTNL_status;
     logic BTNL_press;
     logic BTNL_release;
-    PB_Debouncer #(.DELAY(60)) BTNL_debouncer(
+    PB_Debouncer #(.DELAY(5_000_000)) BTNL_debouncer(
         .clk(CLK100MHZ),
         .rst(1'b0),
         .PB(BTNL),
@@ -103,7 +103,7 @@ module top(
         .start_timer(1'b1),
         .adjust_minutes((~SW[1])&&adj_minutes),
         .adjust_hours((~SW[1])&&adj_hours),
-        .number(number_timer[23:0])
+        .o_number(number_timer[23:0])
     );
 
     //Alarm
@@ -114,48 +114,78 @@ module top(
         .start_timer(1'b0),
         .adjust_minutes(SW[1]&&adj_minutes),
         .adjust_hours(SW[1]&&adj_hours),
-        .number(number_alarm[23:0])
+        .o_number(number_alarm[23:0])
     );
 
-    logic   play_led_alarm;
-    always_comb begin
-        if (number_alarm[23:0]==number_timer[23:0])
-            play_led_alarm = 1'b1;
+    logic   play_led_alarm = 1'd0;
+    always_ff @(posedge CLK100MHZ) begin
+        if (rst_press)
+            play_led_alarm <= 1'b0;
+        else if (number_alarm[23:0]==number_timer[23:0])
+            play_led_alarm <= 1'b1;
         else
-            play_led_alarm = 1'b0;
+            play_led_alarm <= 1'b0;
     end
     
-    //logic [13:0] leds;
     led_alarm led_inst(
         .clk(CLK100MHZ),
         .rst(rst_press),
         .start(play_led_alarm),
         .LED(LED[15:2])
     );
-    //assign LED[15:2] = leds[13:0];
 
-
-    logic [23:0] number;
-    assign number[23:0] = (SW[1])?number_alarm[23:0]:number_timer[23:0];
+    //Timer mode: Clok vs Alarm
     assign LED[1] = SW[1];
 
+    logic [23:0] number = 24'd0;
+    logic [23:0] number_next = 24'd0;
+    always_comb begin
+        if (SW[1])
+            number_next[23:0] = number_alarm[23:0];
+        else
+            number_next[23:0] = number_timer[23:0];
+    end
+    always_ff @(posedge CLK100MHZ) begin
+        if (rst_press)
+            number[23:0] <= 24'd0;
+        else    
+            number[23:0] <= number_next[23:0];
+    end
+    
+    
     //Time format
-    logic [23:0] number_bcd;
-    assign number_bcd[23:0] = (SW[0]&&(number[23:0]>='d130000))?number[23:0]-'d120000:(SW[0]&&(number[23:0]<'d10000))?number[23:0]+'d120000:number[23:0];
     assign LED[0] = SW[0];
 
-    //Display
+    logic [23:0] final_number = 24'd0;
+    logic [23:0] final_number_next = 24'd0;
+    always_comb begin
+        if (SW[0]&&(number[23:0]>='d130000))
+            final_number_next[23:0] = number[23:0]-'d120000;
+        else if (SW[0]&&(number[23:0]<'d10000))
+            final_number_next[23:0] = number[23:0]+'d120000;
+        else
+            final_number_next[23:0] = number[23:0];
+    end
+    
+    always_ff @(posedge CLK100MHZ) begin
+        if (rst_press)
+            final_number[23:0] <= 24'd0;
+        else
+            final_number[23:0] <= final_number_next[23:0];
+    end
+
+    // Adapt numbert to BCD format, for display purpose
     logic idle;
     logic [31:0] bcd;
     unsigned_to_bcd u32_to_bcd_inst (
 		.clk(CLK100MHZ),
 		.trigger(1'b1),
-		.in({8'd0,number_bcd[23:0]}),
+		.in({8'd0,final_number[23:0]}),
 		.idle(idle),
 		.bcd(bcd[31:0])
 	);
 
-
+     //Display
     logic clk_display;
     clk_divider #(.O_CLK_FREQ(1000)) clk_divider_display (
         .clk_in(CLK100MHZ),

@@ -27,7 +27,7 @@ module timer#(
     input   logic start_timer,
     input   logic adjust_minutes,
     input   logic adjust_hours,
-    output  logic [23:0] number
+    output  logic [23:0] o_number
     
     );
     
@@ -169,7 +169,48 @@ module timer#(
             state <= state_next;
     end
 
-    assign number[23:0] = {8'd0,hours[7:0]}* 'd10000 + {8'd0,minutes[7:0]} * 'd100  + {8'd0,seconds[7:0]};
 
+    //Output number calculation pipeline
+    logic [7:0] seconds1        = 'd0;
+    logic [7:0] seconds1_next   = 'd0;
+
+    logic [15:0] minutes1       = 'd0;
+    logic [15:0] minutes1_next  = 'd0;
+    
+    logic [15:0] hours1         = 'd0;
+    logic [15:0] hours1_next    = 'd0;
+
+    logic [15:0] min_and_sec    = 'd0;
+    logic [15:0] min_and_sec_next = 'd0;
+
+    logic [23:0] hours2         = 'd0;
+    logic [23:0] hours2_next    = 'd0;
+   
+    logic [23:0] hour_and_min_and_sec = 'd0;
+    logic [23:0] hour_and_min_and_sec_next = 'd0;
+
+    always_comb begin
+        seconds1_next[7:0]  =  seconds[7:0];
+        minutes1_next[15:0] = minutes[7:0]*'d100;
+        hours1_next[15:0]   = hours[7:0]*'d100;
+
+        min_and_sec_next[15:0] = minutes1[15:0] + seconds1[7:0];
+        hours2_next[23:0]   = hours1[15:0]*'d100;
+
+        hour_and_min_and_sec_next[23:0] = hours2[23:0] + min_and_sec[15:0];
+    end
+
+    always_ff @(posedge clk) begin
+        seconds1[7:0]    <= seconds1_next[7:0];
+        minutes1[15:0]  <= minutes1_next[15:0];
+        hours1[15:0] <= hours1_next[15:0];
+
+        min_and_sec[15:0] <= min_and_sec_next[15:0];
+        hours2[23:0] <= hours2_next[23:0];
+
+        hour_and_min_and_sec[23:0] <= hour_and_min_and_sec_next[23:0];
+    end
+
+    assign  o_number[23:0] = hour_and_min_and_sec[23:0];
 
 endmodule
